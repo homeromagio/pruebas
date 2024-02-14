@@ -22,15 +22,20 @@ while ($user = mysqli_fetch_assoc($eligibleUsersQuery)) {
             // Check if the reservation already exists for the current week
             $existingReservation = mysqli_query($mysqli, "SELECT * FROM actividad_reservas WHERE registrados_dni='" . $user['dni'] . "' AND fecha='" . $fecha . "' AND actividad_horarios_id_horario='" . $id_horario . "'");
             if (mysqli_num_rows($existingReservation) == 0) {
-                // Check if the user has enough credits for the reservation
-                $cost = getReservationCost($mysqli, $id_horario); // Assuming there is a function to retrieve the cost
+                // Check if the id_horario is listed in actividad_horarios_susp (holiday or suspended activity)
+                $isSuspended = mysqli_query($mysqli, "SELECT * FROM actividad_horarios_susp WHERE id_horario='" . $id_horario . "' AND fecha='" . $fecha . "'");
 
-                if ($user['credito'] >= $cost) {
-                    // Reserve the same time slot for the current week
-                    mysqli_query($mysqli, "INSERT INTO actividad_reservas (registrados_dni, fecha, actividad_horarios_id_horario) VALUES ('" . $user['dni'] . "', '" . $fecha . "', '" . $id_horario . "')");
+                if (mysqli_num_rows($isSuspended) == 0) {
+                    // Check if the user has enough credits for the reservation
+                    $cost = getReservationCost($mysqli, $id_horario); // Assuming there is a function to retrieve the cost
 
-                    // Deduct the cost from the user's credits
-                    mysqli_query($mysqli, "UPDATE registrados SET credito = credito - " . $cost . " WHERE dni = '" . $user['dni'] . "'");
+                    if ($user['credito'] >= $cost) {
+                        // Reserve the same time slot for the current week
+                        mysqli_query($mysqli, "INSERT INTO actividad_reservas (registrados_dni, fecha, actividad_horarios_id_horario) VALUES ('" . $user['dni'] . "', '" . $fecha . "', '" . $id_horario . "')");
+
+                        // Deduct the cost from the user's credits
+                        mysqli_query($mysqli, "UPDATE registrados SET credito = credito - " . $cost . " WHERE dni = '" . $user['dni'] . "'");
+                    }
                 }
             }
         }
